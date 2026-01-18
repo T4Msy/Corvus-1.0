@@ -2,7 +2,7 @@
 
 // ===== CONFIGURAÇÃO DO WEBHOOK =====
 // Cole aqui a URL do seu webhook do n8n
-const WEBHOOK_URL = "https://warm-polls-treasury-gay.trycloudflare.com/webhook-test/corvus";
+const WEBHOOK_URL = "https://warm-polls-treasury-gay.trycloudflare.com/webhook/corvus";
 // Exemplo: "https://seu-n8n.com/webhook/corvus"
 
 // ===== CONFIGURAÇÃO DE USUÁRIO =====
@@ -274,3 +274,4 @@ function loadChatHistory() {
         appendMessage(msg.role, msg.text, false);
     });
 }
+
