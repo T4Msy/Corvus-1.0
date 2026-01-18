@@ -4,7 +4,7 @@
 // Cole aqui a URL do seu webhook do n8n
 const WEBHOOK_URL = "https://warm-polls-treasury-gay.trycloudflare.com/webhook/corvus";
 // Exemplo: "https://seu-n8n.com/webhook/corvus"
-
+//atualizaaaaaaa
 // ===== CONFIGURAÇÃO DE USUÁRIO =====
 const USER_ID = "web-user";
 let sessionId = generateSessionId();
@@ -274,4 +274,5 @@ function loadChatHistory() {
         appendMessage(msg.role, msg.text, false);
     });
 }
+
 
