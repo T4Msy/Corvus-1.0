@@ -1415,3 +1415,42 @@ body {
   }
 }
 
+/* ===== Sidebar layout robusto (iOS friendly) ===== */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden; /* quem rola é o conteúdo interno */
+}
+
+/* A área interna vira coluna */
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0; /* CRUCIAL p/ iOS permitir overflow em filhos */
+}
+
+/* Histórico deve ocupar o espaço e rolar */
+.sidebar-history {
+  flex: 1;
+  min-height: 0; /* CRUCIAL */
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-history-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Rodapé sempre visível e não "some" */
+.sidebar-info {
+  margin-top: 0;           /* tira espaçamento que atrapalha */
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  flex: 0 0 auto;          /* não encolhe */
+}
+
