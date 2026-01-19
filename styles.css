@@ -1373,3 +1373,9 @@ body {
     z-index: 1;
   }
 }
+
+.sidebar,
+.chat-messages,
+.sidebar-history-list {
+  -webkit-overflow-scrolling: touch;
+}
