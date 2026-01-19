@@ -1343,3 +1343,33 @@ body {
   color: var(--color-text-secondary);
   font-weight: 500;
 }
+/* ===== iOS FIX: impedir camadas invisíveis de bloquear cliques ===== */
+
+@media (max-width: 768px) {
+  /* Sidebar fechada não deve capturar toque */
+  .sidebar {
+    pointer-events: none;
+  }
+  .sidebar.active {
+    pointer-events: auto;
+  }
+
+  /* Overlay invisível não deve capturar toque */
+  .sidebar-overlay {
+    display: block;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  /* Garante que o chat fica acima de qualquer contexto estranho */
+  .chat-container {
+    position: relative;
+    z-index: 1;
+  }
+}
