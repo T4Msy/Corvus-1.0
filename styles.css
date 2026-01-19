@@ -1379,3 +1379,39 @@ body {
 .sidebar-history-list {
   -webkit-overflow-scrolling: touch;
 }
+
+/* ===== iOS FIX FINAL: scroll suave e cliques OK ===== */
+
+@media (max-width: 768px) {
+  /* Sidebar */
+  .sidebar {
+    pointer-events: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* <-- momentum scroll */
+  }
+
+  .sidebar.active {
+    pointer-events: auto;
+  }
+
+  /* Overlay */
+  .sidebar-overlay {
+    display: block;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  /* Conteúdo do chat sempre clicável */
+  .chat-container {
+    position: relative;
+    z-index: 1;
+  }
+}
+
