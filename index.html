@@ -1,9 +1,9 @@
-<!-- index.html -->
+<!-- index.html (COM HISTÓRICO NA SIDEBAR - sem mudar nada do chat atual, apenas adicionando) -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>CORVUS - Agente Oficial da MSY</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,8 +23,13 @@
         <!-- Header -->
         <header class="header">
             <div class="header-content">
+                <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
                 <div class="logo">
-                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <img src="corvuslogo.png" alt="Corvus Logo" class="logo-icon" />
                         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                     </svg>
                     <div class="logo-text">
@@ -34,7 +39,7 @@
                 </div>
                 <div class="header-status">
                     <div class="status-indicator"></div>
-                    <span>Corvus 1.0</span>
+                    <span>Corvus v1.0</span>
                 </div>
             </div>
             <div class="header-glow"></div>
@@ -42,47 +47,54 @@
 
         <!-- Main Content -->
         <div class="main-content">
-            <!-- Sidebar -->
-            <aside class="sidebar">
-                <button class="btn-new-chat" id="newChatBtn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 5v14M5 12h14"/>
-                    </svg>
-                    Novo Chat
-                </button>
+            <!-- Sidebar Simplificada -->
+            <aside class="sidebar" id="sidebar">
+  <div class="sidebar-content">
+    <button class="btn-new-chat" id="newChatBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      Novo Chat
+    </button>
 
-                <div class="suggestions-container">
-                    <h3>Sugestões</h3>
-                    <div class="suggestion-card" data-prompt="Quais são os valores da Ordem Masayoshi?">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 6v6l4 2"/>
-                        </svg>
-                        <p>Quais são os valores da MSY?</p>
-                    </div>
-                    <div class="suggestion-card" data-prompt="Explique a estrutura e cargos da Ordem Masayoshi.">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                            <circle cx="9" cy="7" r="4"/>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-                        </svg>
-                        <p>Estrutura e cargos da MSY</p>
-                    </div>
-                    <div class="suggestion-card" data-prompt="O que é o Corvus 1.0 e quais são suas limitações?">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                            <line x1="12" y1="17" x2="12.01" y2="17"/>
-                        </svg>
-                        <p>O que é o Corvus 1.0?</p>
-                    </div>
-                </div>
-            </aside>
+    <!-- HISTÓRICO NA SIDEBAR -->
+    <div class="sidebar-history" aria-label="Histórico de conversas">
+      <div class="sidebar-history-header">
+        <span class="sidebar-history-title">Conversas</span>
+        <button class="btn-clear-history" id="clearAllChatsBtn" type="button" title="Limpar todo o histórico">
+          Limpar
+        </button>
+      </div>
+
+      <!-- Itens injetados pelo JS -->
+      <div class="sidebar-history-list" id="chatList"></div>
+    </div>
+    <!-- /HISTÓRICO -->
+
+    <div class="sidebar-info">
+  <div class="info-divider"></div>
+
+  <div class="info-item info-institution">
+    <span class="info-label">Desenvolvido pela</span>
+    <span class="info-value">Ordem Masayoshi</span>
+  </div>
+
+  <div class="info-item info-credits">
+    <span class="info-label">Arquitetura</span>
+    <span class="info-value">T4 Masayoshi • Xitter</span>
+  </div>
+</div>
+
+</aside>
+
+
+            <!-- Overlay for mobile -->
+            <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
             <!-- Chat Area -->
             <main class="chat-container">
                 <div class="chat-messages" id="chatMessages">
-                    <!-- Welcome message injected by JS -->
+                    <!-- Welcome + Suggestions injected by JS -->
                 </div>
 
                 <!-- Input Area -->
@@ -93,14 +105,14 @@
                             placeholder="Faça sua pergunta ao Corvus..."
                             rows="1"
                         ></textarea>
-                        <button id="sendBtn" class="btn-send">
+                        <button id="sendBtn" class="btn-send" aria-label="Enviar mensagem">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="22" y1="2" x2="11" y2="13"/>
                                 <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                             </svg>
                         </button>
                     </div>
-                    <p class="input-hint">Enter para enviar • Shift+Enter para quebrar linha</p>
+                    <p class="input-hint"> © 2026 Masayoshi - Todos os direitos reservados. </p>
                 </div>
             </main>
         </div>
