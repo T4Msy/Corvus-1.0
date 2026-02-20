@@ -2,7 +2,84 @@
 const WEBHOOK_URL = "https://warm-polls-treasury-gay.trycloudflare.com/webhook/corvus";
 
 // ===== CONFIGURAÇÃO DE USUÁRIO =====
-const USER_ID = "web-user";
+let USER_ID = "web-user";
+
+// ===== SUPABASE =====
+const SUPABASE_URL = "https://bjqarrswkxkgfdbxjuuj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWFycnN3a3hrZ2ZkYnhqdXVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2OTc4OTQsImV4cCI6MjA4NDI3Mzg5NH0.3nv-46Q-NrxSXLblCmako_4APF5qeKS4L_IjRN2nOjk";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ===== ESTADO DO USUÁRIO =====
+let USUARIO_PERFIL = null;
+let IS_CONVIDADO = false;
+
+// ===== AUTENTICAÇÃO =====
+async function initAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    await loginComSucesso(session.user);
+    return;
+  }
+  if (sessionStorage.getItem("corvus_convidado")) {
+    entrarComoConvidado();
+    return;
+  }
+  mostrarTelaLogin();
+}
+
+function mostrarTelaLogin() {
+  document.getElementById("loginScreen").style.display = "flex";
+}
+
+function esconderTelaLogin() {
+  document.getElementById("loginScreen").style.display = "none";
+}
+
+async function loginComSucesso(user) {
+  USER_ID = user.id;
+  IS_CONVIDADO = false;
+
+  const { data: perfil } = await sb
+    .from("msy_usuarios")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  USUARIO_PERFIL = perfil;
+
+  const nome = perfil?.nome_interno || perfil?.nome || user.email;
+  const cargo = perfil?.sigla_cargo || perfil?.cargo || "Membro";
+  document.getElementById("suiName").textContent = nome;
+  document.getElementById("suiCargo").textContent = cargo;
+  document.getElementById("suiAvatar").textContent = nome.charAt(0).toUpperCase();
+  document.getElementById("sidebarUserInfo").style.display = "flex";
+
+  esconderTelaLogin();
+}
+
+function entrarComoConvidado() {
+  IS_CONVIDADO = true;
+  USER_ID = "convidado_" + Date.now();
+  USUARIO_PERFIL = { nome: "Convidado", tipo: "convidado" };
+  sessionStorage.setItem("corvus_convidado", "true");
+
+  document.getElementById("suiName").textContent = "Convidado";
+  document.getElementById("suiCargo").textContent = "Acesso limitado";
+  document.getElementById("suiAvatar").textContent = "C";
+  document.getElementById("sidebarUserInfo").style.display = "flex";
+
+  document.getElementById("guestBanner").innerHTML = '<div class="guest-banner">Você está como <span>convidado</span>. Algumas informações são restritas.</div>';
+
+  esconderTelaLogin();
+}
+
+async function fazerLogout() {
+  if (!IS_CONVIDADO) await sb.auth.signOut();
+  sessionStorage.removeItem("corvus_convidado");
+  location.reload();
+}
+
+
 
 // ===== CHATS (HISTÓRICO NA SIDEBAR) =====
 const STORAGE_KEY = "corvus_conversations_v1";
@@ -14,7 +91,33 @@ let activeConversationId = null;
 
 // ===== INICIALIZAÇÃO =====
 document.addEventListener("DOMContentLoaded", () => {
-  initializeApp();
+  // Ocultar app até autenticação
+  document.getElementById("loginScreen").style.display = "none";
+
+  // Configurar botões de login
+  document.getElementById("loginBtn").addEventListener("click", async () => {
+    const email = document.getElementById("loginEmail").value.trim();
+    const senha = document.getElementById("loginPassword").value;
+    const btn = document.getElementById("loginBtn");
+    const erro = document.getElementById("loginError");
+    erro.style.display = "none";
+    if (!email || !senha) { erro.textContent = "Preencha email e senha."; erro.style.display = "block"; return; }
+    btn.disabled = true; btn.textContent = "Aguarde...";
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
+    if (error) { erro.textContent = "Credenciais inválidas."; erro.style.display = "block"; btn.disabled = false; btn.textContent = "Acessar"; return; }
+    await loginComSucesso(data.user);
+  });
+
+  document.getElementById("guestBtn").addEventListener("click", entrarComoConvidado);
+  document.getElementById("logoutBtn").addEventListener("click", fazerLogout);
+
+  document.getElementById("loginPassword").addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("loginBtn").click();
+  });
+
+  // Iniciar autenticação
+  initAuth().then(() => {
+    initializeApp();
   initializeMobileMenu();
 
   // Sidebar histórico: cria container se não existir
@@ -30,8 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Welcome (só se conversa ativa estiver vazia)
   showWelcomeMessage();
-  
-  
+  });
 });
 
 function initializeApp() {
@@ -272,11 +374,17 @@ async function sendMessage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: message,
-        userId: USER_ID,
-        sessionId: conv.sessionId,           // sessão por conversa
-        conversationId: conv.id              // opcional (não exige mudança no n8n)
-      }),
+  message: message,
+  userId: USER_ID,
+  sessionId: conv.sessionId,
+  conversationId: conv.id,
+  userContext: {
+    nome: USUARIO_PERFIL?.nome_interno || USUARIO_PERFIL?.nome || "Convidado",
+    cargo: USUARIO_PERFIL?.cargo || "",
+    sigla: USUARIO_PERFIL?.sigla_cargo || "",
+    tipo: IS_CONVIDADO ? "convidado" : (USUARIO_PERFIL?.tipo || "membro")
+  }
+}),
     });
 
     if (!response.ok) throw new Error("Falha na comunicação com o servidor");

@@ -14,8 +14,37 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+<!-- ===== TELA DE LOGIN ===== -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-bg">
+    <div class="gradient-orb orb-1"></div>
+    <div class="gradient-orb orb-2"></div>
+  </div>
+  <div class="login-card">
+    <div class="login-header">
+      <img src="corvuslogo.png" alt="Corvus" class="login-logo-img" />
+      <h1 class="login-title">CORVUS</h1>
+      <span class="login-subtitle">Ordem Masayoshi</span>
+    </div>
+    <div id="loginError" class="login-error" style="display:none;"></div>
+    <div class="login-form">
+      <div class="login-field">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" />
+      </div>
+      <div class="login-field">
+        <label>Senha</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button class="login-btn" id="loginBtn">Acessar</button>
+      <button class="login-guest-btn" id="guestBtn">Entrar como convidado</button>
+    </div>
+  </div>
+</div>
     <!-- Animated Background -->
     <div class="background-container">
         <div class="gradient-orb orb-1"></div>
@@ -44,7 +73,7 @@
                 </div>
                 <div class="header-status">
                     <div class="status-indicator"></div>
-                    <span>Corvus v1.0</span>
+                    <span>Corvus v2.0</span>
                 </div>
             </div>
             <div class="header-glow"></div>
@@ -55,6 +84,15 @@
             <!-- Sidebar Simplificada -->
             <aside class="sidebar" id="sidebar">
   <div class="sidebar-content">
+    <!-- Info do usuário logado -->
+    <div class="sidebar-user-info" id="sidebarUserInfo" style="display:none;">
+      <div class="sui-avatar" id="suiAvatar">?</div>
+      <div class="sui-details">
+        <span class="sui-name" id="suiName">—</span>
+        <span class="sui-cargo" id="suiCargo">—</span>
+      </div>
+      <button class="sui-logout" id="logoutBtn" title="Sair">↪</button>
+    </div>
     <button class="btn-new-chat" id="newChatBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M12 5v14M5 12h14"/>
@@ -98,7 +136,9 @@
 
             <!-- Chat Area -->
             <main class="chat-container">
-                <div class="chat-messages" id="chatMessages">
+            <!-- Banner convidado (injetado por JS) -->
+            <div id="guestBanner"></div>
+            <div class="chat-messages" id="chatMessages">
                     <!-- Welcome + Suggestions injected by JS -->
                 </div>
 
@@ -126,4 +166,3 @@
     <script src="app.js"></script>
 </body>
 </html>
-
