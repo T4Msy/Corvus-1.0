@@ -416,11 +416,17 @@ async function sendMessage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: message,
-        userId: USER_ID,
-        sessionId: conv.sessionId,           // sessão por conversa
-        conversationId: conv.id              // opcional (não exige mudança no n8n)
-      }),
+  message: message,
+  userId: USER_ID,
+  sessionId: conv.sessionId,
+  conversationId: conv.id,
+  userContext: {
+    nome: USUARIO_PERFIL?.nome_interno || USUARIO_PERFIL?.nome || "Convidado",
+    cargo: USUARIO_PERFIL?.cargo || "",
+    sigla: USUARIO_PERFIL?.sigla_cargo || "",
+    tipo: IS_CONVIDADO ? "convidado" : (USUARIO_PERFIL?.tipo || "membro")
+  }
+}),
     });
 
     if (!response.ok) throw new Error("Falha na comunicação com o servidor");
