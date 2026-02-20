@@ -1670,3 +1670,164 @@ body {
   color: var(--color-primary);
   font-weight: 600;
 }
+/* ===== MODAL CUSTOMIZADO ===== */
+.corvus-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.corvus-modal-overlay.visible {
+  opacity: 1;
+}
+
+.corvus-modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-primary);
+  padding: 28px 28px 24px;
+  width: 100%;
+  max-width: 380px;
+  transform: translateY(-12px);
+  transition: transform 0.2s;
+}
+
+.corvus-modal-overlay.visible .corvus-modal {
+  transform: translateY(0);
+}
+
+.corvus-modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.corvus-modal-msg {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.corvus-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.corvus-modal-btn {
+  padding: 9px 18px;
+  font-family: var(--font-main);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition);
+}
+
+.corvus-modal-btn.cancel {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.corvus-modal-btn.cancel:hover {
+  border-color: var(--color-text-secondary);
+  color: var(--color-text);
+}
+
+.corvus-modal-btn.confirm {
+  background: var(--color-primary);
+  border: none;
+  color: #fff;
+}
+
+.corvus-modal-btn.confirm:hover {
+  background: var(--color-primary-hover);
+}
+
+/* ===== FEEDBACK DE SALVAMENTO ===== */
+.feedback-salvo {
+  position: fixed;
+  bottom: 90px;
+  right: 24px;
+  background: rgba(20,20,20,0.95);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #6ee7b7;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: var(--border-radius-sm);
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.25s;
+  pointer-events: none;
+}
+
+.feedback-salvo.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===== MARKDOWN NAS RESPOSTAS ===== */
+.message.corvus .message-bubble h1,
+.message.corvus .message-bubble h2,
+.message.corvus .message-bubble h3 {
+  color: var(--color-text);
+  font-weight: 600;
+  margin: 12px 0 6px;
+  line-height: 1.3;
+}
+
+.message.corvus .message-bubble h1 { font-size: 1.1rem; }
+.message.corvus .message-bubble h2 { font-size: 1rem; }
+.message.corvus .message-bubble h3 { font-size: 0.95rem; }
+
+.message.corvus .message-bubble p {
+  margin: 6px 0;
+  line-height: 1.7;
+}
+
+.message.corvus .message-bubble ul,
+.message.corvus .message-bubble ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.message.corvus .message-bubble li {
+  margin-bottom: 4px;
+  line-height: 1.6;
+}
+
+.message.corvus .message-bubble strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.message.corvus .message-bubble em {
+  color: var(--color-text-secondary);
+}
+
+.message.corvus .message-bubble code {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--color-border);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-family: monospace;
+}
+
+.message.corvus .message-bubble blockquote {
+  border-left: 3px solid var(--color-primary);
+  padding-left: 12px;
+  margin: 8px 0;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
