@@ -761,7 +761,7 @@ async function deleteConversation(chatId) {
   renderChatList(document.getElementById("searchInput")?.value?.trim() || "");
 }
 
-function renameConversation(chatId) {
+async function renameConversation(chatId) {
   const conv = conversations.find((c) => c.id === chatId);
   if (!conv) return;
 
