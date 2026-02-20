@@ -1,36 +1,34 @@
 // ===== CONFIGURAÇÃO DO WEBHOOK =====
 const WEBHOOK_URL = "https://warm-polls-treasury-gay.trycloudflare.com/webhook/corvus";
 
-// ===== CONFIGURAÇÃO DE USUÁRIO =====
-let USER_ID = "web-user";
-
 // ===== SUPABASE =====
 const SUPABASE_URL = "https://bjqarrswkxkgfdbxjuuj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWFycnN3a3hrZ2ZkYnhqdXVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2OTc4OTQsImV4cCI6MjA4NDI3Mzg5NH0.3nv-46Q-NrxSXLblCmako_4APF5qeKS4L_IjRN2nOjk";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== ESTADO DO USUÁRIO =====
+let USER_ID = "web-user";
 let USUARIO_PERFIL = null;
 let IS_CONVIDADO = false;
+
+// ===== CHATS =====
+const STORAGE_KEY = "corvus_conversations_v1";
+const ACTIVE_CHAT_KEY = "corvus_active_conversation_id";
+let conversations = [];
+let activeConversationId = null;
 
 // ===== AUTENTICAÇÃO =====
 async function initAuth() {
   const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    await loginComSucesso(session.user);
-    return;
-  }
-  if (sessionStorage.getItem("corvus_convidado")) {
-    entrarComoConvidado();
-    return;
-  }
+  if (session) { await loginComSucesso(session.user); return true; }
+  if (sessionStorage.getItem("corvus_convidado")) { entrarComoConvidado(); return true; }
   mostrarTelaLogin();
+  return false;
 }
 
 function mostrarTelaLogin() {
   document.getElementById("loginScreen").style.display = "flex";
 }
-
 function esconderTelaLogin() {
   document.getElementById("loginScreen").style.display = "none";
 }
@@ -38,22 +36,14 @@ function esconderTelaLogin() {
 async function loginComSucesso(user) {
   USER_ID = user.id;
   IS_CONVIDADO = false;
-
-  const { data: perfil } = await sb
-    .from("msy_usuarios")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
+  const { data: perfil } = await sb.from("msy_usuarios").select("*").eq("id", user.id).single();
   USUARIO_PERFIL = perfil;
-
   const nome = perfil?.nome_interno || perfil?.nome || user.email;
   const cargo = perfil?.sigla_cargo || perfil?.cargo || "Membro";
   document.getElementById("suiName").textContent = nome;
   document.getElementById("suiCargo").textContent = cargo;
   document.getElementById("suiAvatar").textContent = nome.charAt(0).toUpperCase();
   document.getElementById("sidebarUserInfo").style.display = "flex";
-
   esconderTelaLogin();
 }
 
@@ -62,14 +52,11 @@ function entrarComoConvidado() {
   USER_ID = "convidado_" + Date.now();
   USUARIO_PERFIL = { nome: "Convidado", tipo: "convidado" };
   sessionStorage.setItem("corvus_convidado", "true");
-
   document.getElementById("suiName").textContent = "Convidado";
   document.getElementById("suiCargo").textContent = "Acesso limitado";
   document.getElementById("suiAvatar").textContent = "C";
   document.getElementById("sidebarUserInfo").style.display = "flex";
-
   document.getElementById("guestBanner").innerHTML = '<div class="guest-banner">Você está como <span>convidado</span>. Algumas informações são restritas.</div>';
-
   esconderTelaLogin();
 }
 
@@ -79,23 +66,70 @@ async function fazerLogout() {
   location.reload();
 }
 
+// ===== SUPABASE: OPERAÇÕES DE CONVERSA =====
+async function sbCarregarConversas() {
+  const { data } = await sb
+    .from("msy_conversas")
+    .select("id, titulo, session_id, updated_at")
+    .eq("usuario_id", USER_ID)
+    .order("updated_at", { ascending: false })
+    .limit(50);
+  return (data || []).map(c => ({
+    id: c.id,
+    title: c.titulo,
+    sessionId: c.session_id,
+    updatedAt: new Date(c.updated_at).getTime(),
+    createdAt: new Date(c.updated_at).getTime(),
+    messages: []
+  }));
+}
 
+async function sbCriarConversa(conv) {
+  await sb.from("msy_conversas").insert({
+    id: conv.id,
+    usuario_id: USER_ID,
+    titulo: conv.title,
+    session_id: conv.sessionId,
+    updated_at: new Date(conv.updatedAt).toISOString()
+  });
+}
 
-// ===== CHATS (HISTÓRICO NA SIDEBAR) =====
-const STORAGE_KEY = "corvus_conversations_v1";
-const ACTIVE_CHAT_KEY = "corvus_active_conversation_id";
+async function sbAtualizarConversa(chatId, titulo, updatedAt) {
+  await sb.from("msy_conversas").update({
+    titulo,
+    updated_at: new Date(updatedAt).toISOString()
+  }).eq("id", chatId);
+}
 
-// Estado em memória
-let conversations = [];
-let activeConversationId = null;
+async function sbDeletarConversa(chatId) {
+  await sb.from("msy_conversas").delete().eq("id", chatId);
+}
+
+async function sbCarregarMensagens(chatId) {
+  const { data } = await sb
+    .from("msy_mensagens")
+    .select("role, texto, created_at")
+    .eq("conversa_id", chatId)
+    .order("created_at", { ascending: true });
+  return (data || []).map(m => ({
+    role: m.role,
+    text: m.texto,
+    timestamp: new Date(m.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    createdAt: new Date(m.created_at).getTime()
+  }));
+}
+
+async function sbSalvarMensagem(chatId, role, texto) {
+  await sb.from("msy_mensagens").insert({ conversa_id: chatId, role, texto });
+}
 
 // ===== INICIALIZAÇÃO =====
 document.addEventListener("DOMContentLoaded", () => {
-  // Ocultar app até autenticação
+  // Ocultar tela de login até verificar sessão
   document.getElementById("loginScreen").style.display = "none";
 
-  // Configurar botões de login
-  document.getElementById("loginBtn").addEventListener("click", async () => {
+  // Botões de login
+  document.getElementById("loginBtn")?.addEventListener("click", async () => {
     const email = document.getElementById("loginEmail").value.trim();
     const senha = document.getElementById("loginPassword").value;
     const btn = document.getElementById("loginBtn");
@@ -106,35 +140,43 @@ document.addEventListener("DOMContentLoaded", () => {
     const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
     if (error) { erro.textContent = "Credenciais inválidas."; erro.style.display = "block"; btn.disabled = false; btn.textContent = "Acessar"; return; }
     await loginComSucesso(data.user);
+    await inicializarApp();
   });
 
-  document.getElementById("guestBtn").addEventListener("click", entrarComoConvidado);
-  document.getElementById("logoutBtn").addEventListener("click", fazerLogout);
-
-  document.getElementById("loginPassword").addEventListener("keydown", e => {
-    if (e.key === "Enter") document.getElementById("loginBtn").click();
+  document.getElementById("guestBtn")?.addEventListener("click", () => {
+    entrarComoConvidado();
+    inicializarApp();
   });
 
-  // Iniciar autenticação
-  initAuth().then(() => {
-    initializeApp();
-  initializeMobileMenu();
+  document.getElementById("logoutBtn")?.addEventListener("click", fazerLogout);
 
-  // Sidebar histórico: cria container se não existir
-  ensureHistoryContainer();
+  document.getElementById("loginPassword")?.addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("loginBtn")?.click();
+  });
 
-  // Carrega conversas + render
-  loadConversationsFromStorage();
-  ensureActiveConversation();
-  renderChatList();
-
-  // Carrega mensagens da conversa ativa
-  loadActiveConversationMessages();
-
-  // Welcome (só se conversa ativa estiver vazia)
-  showWelcomeMessage();
+  // Verificar sessão existente
+  initAuth().then(async (autenticado) => {
+    if (autenticado) await inicializarApp();
   });
 });
+
+async function inicializarApp() {
+  initializeApp();
+  initializeMobileMenu();
+  ensureHistoryContainer();
+  await loadConversationsFromStorage();
+  ensureActiveConversation();
+  renderChatList();
+  if (!IS_CONVIDADO) {
+    const conv = getActiveConversation();
+    if (conv) {
+      const msgs = await sbCarregarMensagens(conv.id);
+      conv.messages = msgs;
+    }
+  }
+  loadActiveConversationMessages();
+  showWelcomeMessage();
+}
 
 function initializeApp() {
   const sendBtn = document.getElementById("sendBtn");
@@ -147,7 +189,7 @@ function initializeApp() {
   messageInput?.addEventListener("keydown", handleKeyDown);
 
   // "Novo Chat" agora cria nova conversa (não apaga tudo)
-  newChatBtn?.addEventListener("click", () => createNewConversation(true));
+  newChatBtn?.addEventListener("click", async () => createNewConversation(true));
 
   // Botão "Limpar" (apaga TODAS as conversas e reseta)
   clearAllBtn?.addEventListener("click", () => {
@@ -361,7 +403,7 @@ async function sendMessage() {
   removeWelcomeIfPresent();
 
   // Mostrar mensagem do usuário
-  appendMessage("user", message);
+  await appendMessage("user", message);
 
   // Atualizar título automático (apenas se for a 1ª mensagem do usuário)
   autoTitleConversationIfNeeded(conv.id);
@@ -374,17 +416,11 @@ async function sendMessage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-  message: message,
-  userId: USER_ID,
-  sessionId: conv.sessionId,
-  conversationId: conv.id,
-  userContext: {
-    nome: USUARIO_PERFIL?.nome_interno || USUARIO_PERFIL?.nome || "Convidado",
-    cargo: USUARIO_PERFIL?.cargo || "",
-    sigla: USUARIO_PERFIL?.sigla_cargo || "",
-    tipo: IS_CONVIDADO ? "convidado" : (USUARIO_PERFIL?.tipo || "membro")
-  }
-}),
+        message: message,
+        userId: USER_ID,
+        sessionId: conv.sessionId,           // sessão por conversa
+        conversationId: conv.id              // opcional (não exige mudança no n8n)
+      }),
     });
 
     if (!response.ok) throw new Error("Falha na comunicação com o servidor");
@@ -411,16 +447,16 @@ async function sendMessage() {
       (data.choices && data.choices[0]?.message?.content) ||
       "Resposta não disponível";
 
-    appendMessage("corvus", reply);
+    await appendMessage("corvus", reply);
   } catch (error) {
     removeTypingIndicator();
-    appendMessage("corvus", "Corvus está indisponível no momento. Erro: " + error.message);
+    await appendMessage("corvus", "Corvus está indisponível no momento. Erro: " + error.message);
   } finally {
     setLoading(false);
   }
 }
 
-function appendMessage(role, text, saveToHistory = true) {
+async function appendMessage(role, text, saveToHistory = true) {
   const chatMessages = document.getElementById("chatMessages");
   if (!chatMessages) return;
 
@@ -468,9 +504,9 @@ function appendMessage(role, text, saveToHistory = true) {
   scrollToBottom();
 
   if (saveToHistory) {
-    saveMessageToActiveConversation({
+    await saveMessageToActiveConversation({
       role,
-      text: rawText, // <- sempre texto puro no storage
+      text: rawText,
       timestamp,
       createdAt: Date.now(),
     });
@@ -587,19 +623,29 @@ function ensureHistoryContainer() {
   newChatBtn.insertAdjacentElement("afterend", chatList);
 }
 
-function loadConversationsFromStorage() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  conversations = raw ? safeJsonParse(raw, []) : [];
-
-  const active = localStorage.getItem(ACTIVE_CHAT_KEY);
-  activeConversationId = active || null;
-
-  // Migração mínima: se for lista antiga "chatHistory", não importa; não mexe.
+async function loadConversationsFromStorage() {
+  if (!IS_CONVIDADO) {
+    // Membro: carregar do Supabase
+    conversations = await sbCarregarConversas();
+    const active = localStorage.getItem(ACTIVE_CHAT_KEY + "_" + USER_ID);
+    activeConversationId = active || null;
+  } else {
+    // Convidado: localStorage
+    const raw = localStorage.getItem(STORAGE_KEY);
+    conversations = raw ? safeJsonParse(raw, []) : [];
+    const active = localStorage.getItem(ACTIVE_CHAT_KEY);
+    activeConversationId = active || null;
+  }
 }
 
 function persistConversationsToStorage() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
-  if (activeConversationId) localStorage.setItem(ACTIVE_CHAT_KEY, activeConversationId);
+  if (IS_CONVIDADO) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+    if (activeConversationId) localStorage.setItem(ACTIVE_CHAT_KEY, activeConversationId);
+  } else {
+    // Membro: salvar ID ativo localmente, dados vão pro Supabase via funções específicas
+    if (activeConversationId) localStorage.setItem(ACTIVE_CHAT_KEY + "_" + USER_ID, activeConversationId);
+  }
 }
 
 function safeJsonParse(raw, fallback) {
@@ -646,30 +692,36 @@ function getActiveConversation() {
   return conversations.find((c) => c.id === activeConversationId) || null;
 }
 
-function setActiveConversation(chatId, closeMenuOnMobile = false) {
+async function setActiveConversation(chatId, closeMenuOnMobile = false) {
   const conv = conversations.find((c) => c.id === chatId);
   if (!conv) return;
 
   activeConversationId = chatId;
   persistConversationsToStorage();
 
-  // UI
+  // Para membros, carregar mensagens do Supabase
+  if (!IS_CONVIDADO) {
+    const msgs = await sbCarregarMensagens(chatId);
+    conv.messages = msgs;
+  }
+
   renderChatList(document.getElementById("searchInput")?.value?.trim() || "");
   loadActiveConversationMessages();
-
-  // Welcome se vazio
   showWelcomeMessage();
 
   if (closeMenuOnMobile) closeMobileMenu();
 }
 
-function createNewConversation(closeMenuOnMobile = false) {
+async function createNewConversation(closeMenuOnMobile = false) {
   const conv = makeConversation("Nova conversa");
-  conversations.unshift(conv); // mais recente no topo
+  conversations.unshift(conv);
   activeConversationId = conv.id;
   persistConversationsToStorage();
 
-  // Limpa chat visual
+  if (!IS_CONVIDADO) {
+    await sbCriarConversa(conv);
+  }
+
   const chatMessages = document.getElementById("chatMessages");
   if (chatMessages) chatMessages.innerHTML = "";
 
@@ -679,7 +731,7 @@ function createNewConversation(closeMenuOnMobile = false) {
   if (closeMenuOnMobile) closeMobileMenu();
 }
 
-function deleteConversation(chatId) {
+async function deleteConversation(chatId) {
   const conv = conversations.find((c) => c.id === chatId);
   if (!conv) return;
 
@@ -705,6 +757,7 @@ function deleteConversation(chatId) {
   }
 
   persistConversationsToStorage();
+  if (!IS_CONVIDADO) await sbDeletarConversa(chatId);
   renderChatList(document.getElementById("searchInput")?.value?.trim() || "");
 }
 
@@ -721,6 +774,7 @@ function renameConversation(chatId) {
   conv.title = trimmed;
   conv.updatedAt = Date.now();
   persistConversationsToStorage();
+  if (!IS_CONVIDADO) await sbAtualizarConversa(conv.id, trimmed, conv.updatedAt);
   renderChatList(document.getElementById("searchInput")?.value?.trim() || "");
 }
 
@@ -741,6 +795,7 @@ function autoTitleConversationIfNeeded(chatId) {
   conv.title = plain.length > 32 ? plain.slice(0, 32).trim() + "…" : plain;
   conv.updatedAt = Date.now();
   persistConversationsToStorage();
+  if (!IS_CONVIDADO) sbAtualizarConversa(conv.id, conv.title, conv.updatedAt);
   renderChatList(document.getElementById("searchInput")?.value?.trim() || "");
 }
 
@@ -750,7 +805,7 @@ function stripHtml(html) {
   return div.textContent || div.innerText || "";
 }
 
-function saveMessageToActiveConversation(message) {
+async function saveMessageToActiveConversation(message) {
   const conv = getActiveConversation();
   if (!conv) return;
 
@@ -759,6 +814,12 @@ function saveMessageToActiveConversation(message) {
   conv.updatedAt = Date.now();
 
   persistConversationsToStorage();
+
+  if (!IS_CONVIDADO) {
+    await sbSalvarMensagem(conv.id, message.role, message.text);
+    await sbAtualizarConversa(conv.id, conv.title, conv.updatedAt);
+  }
+
   renderChatList(document.getElementById("searchInput")?.value?.trim() || "");
 }
 
