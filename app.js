@@ -192,8 +192,8 @@ function initializeApp() {
   newChatBtn?.addEventListener("click", async () => createNewConversation(true));
 
   // Botão "Limpar" (apaga TODAS as conversas e reseta)
-  clearAllBtn?.addEventListener("click", () => {
-    const ok = confirm("Deseja apagar TODAS as conversas? Isso não pode ser desfeito.");
+  clearAllBtn?.addEventListener("click", async () => {
+    const ok = await mostrarModal("Limpar todo o histórico?", "Todas as conversas serão apagadas. Isso não pode ser desfeito.", "Limpar tudo", "danger");
     if (!ok) return;
 
     // Limpa storage
@@ -319,6 +319,63 @@ function handleKeyDown(e) {
   }
 }
 
+function getSugestoesPorCargo() {
+  const sigla = USUARIO_PERFIL?.sigla_cargo || "";
+  const tipo = IS_CONVIDADO ? "convidado" : (USUARIO_PERFIL?.tipo || "membro");
+  const nome = USUARIO_PERFIL?.nome_interno || USUARIO_PERFIL?.nome || "membro";
+
+  if (tipo === "convidado") return [
+    { prompt: "O que é a Ordem Masayoshi?", label: "O que é a MSY?" },
+    { prompt: "Quais são os valores da Ordem Masayoshi?", label: "Valores da MSY" },
+    { prompt: "Como funciona a estrutura da MSY?", label: "Estrutura da MSY" }
+  ];
+
+  if (!sigla || tipo === "admin") return [
+    { prompt: "Me dê um panorama geral do estado atual da Ordem.", label: "Panorama da Ordem" },
+    { prompt: "Quais membros estão ativos na MSY?", label: "Membros ativos" },
+    { prompt: "Quais são os valores e pilares da MSY?", label: "Valores e pilares" }
+  ];
+
+  const sugestoesPorSigla = {
+    "C.G.": [
+      { prompt: "Como está a dinâmica atual dos membros da Ordem?", label: "Dinâmica dos membros" },
+      { prompt: "Quais são os principais desafios de gestão da MSY?", label: "Desafios de gestão" },
+      { prompt: "Me ajude a pensar em como fortalecer a coesão da Ordem.", label: "Coesão da Ordem" }
+    ],
+    "C.E.": [
+      { prompt: "Como está a estrutura organizacional atual da MSY?", label: "Estrutura organizacional" },
+      { prompt: "Me ajude a pensar em processos internos para a Ordem.", label: "Processos internos" },
+      { prompt: "Quais são os pilares formais da MSY?", label: "Pilares formais" }
+    ],
+    "S.G.": [
+      { prompt: "Como a MSY se comunica e se posiciona internamente?", label: "Comunicação interna" },
+      { prompt: "Me ajude a pensar na identidade e narrativa da Ordem.", label: "Identidade da Ordem" },
+      { prompt: "Quais são os valores que definem a MSY?", label: "Valores da MSY" }
+    ],
+    "S.E.I.": [
+      { prompt: "O que precisa ser executado na Ordem atualmente?", label: "Execução atual" },
+      { prompt: "Me ajude a transformar uma ideia em ação concreta.", label: "Ideia em ação" },
+      { prompt: "Como posso contribuir melhor com a MSY?", label: "Minha contribuição" }
+    ],
+    "A.I.": [
+      { prompt: "Como posso ajudar novos membros a se integrar melhor?", label: "Integração de membros" },
+      { prompt: "Quais são os valores que todo membro deve conhecer?", label: "Valores essenciais" },
+      { prompt: "Como está o clima interno da Ordem?", label: "Clima interno" }
+    ],
+    "D.O.": [
+      { prompt: "Como a identidade visual representa os valores da MSY?", label: "Identidade visual" },
+      { prompt: "Me inspire com a essência e simbolismo da Ordem.", label: "Essência da Ordem" },
+      { prompt: "Quais elementos visuais representam melhor a MSY?", label: "Elementos da MSY" }
+    ]
+  };
+
+  return sugestoesPorSigla[sigla] || [
+    { prompt: "Quais são os valores da Ordem Masayoshi?", label: "Valores da MSY" },
+    { prompt: "Explique a estrutura e cargos da Ordem Masayoshi.", label: "Estrutura da MSY" },
+    { prompt: "Como posso contribuir melhor com a Ordem?", label: "Minha contribuição" }
+  ];
+}
+
 function showWelcomeMessage() {
   const conv = getActiveConversation();
   if (!conv) return;
@@ -327,46 +384,39 @@ function showWelcomeMessage() {
     const chatMessages = document.getElementById("chatMessages");
     if (!chatMessages) return;
 
+    const nome = USUARIO_PERFIL?.nome_interno || USUARIO_PERFIL?.nome || "visitante";
+    const saudacao = IS_CONVIDADO ? "Olá! Sou Corvus" : `Olá, ${nome}`;
+    const sugestoes = getSugestoesPorCargo();
+
+    const icones = [
+      `<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>`,
+      `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>`,
+      `<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>`
+    ];
+
+    const cardsHTML = sugestoes.map((s, i) => `
+      <div class="suggestion-card welcome-card" data-prompt="${s.prompt}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          ${icones[i] || icones[0]}
+        </svg>
+        <p>${s.label}</p>
+      </div>
+    `).join("");
+
     const welcomeHTML = `
       <div class="welcome-section" id="welcomeSection">
-        <h2 class="welcome-title">Olá! Sou Corvus</h2>
+        <h2 class="welcome-title">${saudacao}</h2>
         <p class="welcome-subtitle">
           Agente oficial da MSY. Posso te ajudar com informações sobre
           a Ordem Masayoshi, estrutura, valores e muito mais.
         </p>
-        <div class="suggestions-grid">
-          <div class="suggestion-card welcome-card" data-prompt="Quais são os valores da Ordem Masayoshi?">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 6v6l4 2"/>
-            </svg>
-            <p>Quais são os valores da MSY?</p>
-          </div>
-          <div class="suggestion-card welcome-card" data-prompt="Explique a estrutura e cargos da Ordem Masayoshi.">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-            <p>Estrutura e cargos da MSY</p>
-          </div>
-          <div class="suggestion-card welcome-card" data-prompt="O que é o Corvus 1.0 e quais são suas limitações?">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-              <line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
-            <p>O que é o Corvus 1.0?</p>
-          </div>
-        </div>
+        <div class="suggestions-grid">${cardsHTML}</div>
       </div>
     `;
 
     chatMessages.innerHTML = welcomeHTML;
 
-    // Eventos dos cards
-    const welcomeCards = document.querySelectorAll(".welcome-card");
-    welcomeCards.forEach((card) => {
+    document.querySelectorAll(".welcome-card").forEach((card) => {
       card.addEventListener("click", () => {
         const prompt = card.getAttribute("data-prompt");
         const input = document.getElementById("messageInput");
@@ -466,8 +516,11 @@ async function appendMessage(role, text, saveToHistory = true) {
   const chatMessages = document.getElementById("chatMessages");
   if (!chatMessages) return;
 
-  const rawText = normalizeForStorage(text);        // salva texto puro
-  const displayText = sanitizeForDisplay(rawText);  // render seguro com <br>
+  const rawText = normalizeForStorage(text);
+  // Markdown para corvus, texto puro para user
+  const displayText = role === "corvus"
+    ? (typeof marked !== "undefined" ? marked.parse(rawText) : sanitizeForDisplay(rawText))
+    : sanitizeForDisplay(rawText);
 
   const messageDiv = document.createElement("div");
   messageDiv.className = `message ${role}`;
@@ -477,11 +530,13 @@ async function appendMessage(role, text, saveToHistory = true) {
     minute: "2-digit",
   });
 
-  // Avatar: Corvus = imagem, User = letra U
+  // Avatar: Corvus = imagem, User = inicial do nome
+  const nomeUsuario = USUARIO_PERFIL?.nome_interno || USUARIO_PERFIL?.nome || "U";
+  const inicialUsuario = nomeUsuario.charAt(0).toUpperCase();
   const avatarHTML =
     role === "corvus"
       ? `<img src="corvuslogo.png" alt="Corvus" class="avatar-image" />`
-      : `<span>U</span>`;
+      : `<span>${inicialUsuario}</span>`;
 
   messageDiv.innerHTML = `
     <div class="message-avatar">${avatarHTML}</div>
@@ -741,7 +796,7 @@ async function deleteConversation(chatId) {
   const conv = conversations.find((c) => c.id === chatId);
   if (!conv) return;
 
-  const ok = confirm(`Excluir a conversa "${conv.title}"? Isso não pode ser desfeito.`);
+  const ok = await mostrarModal(`Excluir "<strong>${escapeHtml(conv.title)}</strong>"?`, "Essa ação não pode ser desfeita.", "Excluir", "danger");
   if (!ok) return;
 
   conversations = conversations.filter((c) => c.id !== chatId);
@@ -824,6 +879,7 @@ async function saveMessageToActiveConversation(message) {
   if (!IS_CONVIDADO) {
     await sbSalvarMensagem(conv.id, message.role, message.text);
     await sbAtualizarConversa(conv.id, conv.title, conv.updatedAt);
+    if (message.role === "corvus") mostrarFeedbackSalvo();
   }
 
   renderChatList(document.getElementById("searchInput")?.value?.trim() || "");
@@ -899,4 +955,60 @@ function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str;
   return div.innerHTML;
+}
+
+
+// ===== MODAL CUSTOMIZADO =====
+function mostrarModal(titulo, mensagem, btnConfirmar = "Confirmar", tipo = "default") {
+  return new Promise((resolve) => {
+    // Remove modal existente se houver
+    document.getElementById("corvusModal")?.remove();
+
+    const corBtn = tipo === "danger" ? "var(--color-primary)" : "var(--color-primary)";
+
+    const modal = document.createElement("div");
+    modal.id = "corvusModal";
+    modal.className = "corvus-modal-overlay";
+    modal.innerHTML = `
+      <div class="corvus-modal">
+        <div class="corvus-modal-title">${titulo}</div>
+        <div class="corvus-modal-msg">${mensagem}</div>
+        <div class="corvus-modal-actions">
+          <button class="corvus-modal-btn cancel" id="modalCancel">Cancelar</button>
+          <button class="corvus-modal-btn confirm" id="modalConfirm">${btnConfirmar}</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    requestAnimationFrame(() => modal.classList.add("visible"));
+
+    const fechar = (resultado) => {
+      modal.classList.remove("visible");
+      setTimeout(() => modal.remove(), 200);
+      resolve(resultado);
+    };
+
+    document.getElementById("modalConfirm").addEventListener("click", () => fechar(true));
+    document.getElementById("modalCancel").addEventListener("click", () => fechar(false));
+    modal.addEventListener("click", (e) => { if (e.target === modal) fechar(false); });
+  });
+}
+
+// ===== FEEDBACK DE SALVAMENTO =====
+function mostrarFeedbackSalvo() {
+  const existing = document.getElementById("feedbackSalvo");
+  if (existing) { existing.remove(); }
+
+  const el = document.createElement("div");
+  el.id = "feedbackSalvo";
+  el.className = "feedback-salvo";
+  el.textContent = "✓ Conversa salva";
+  document.body.appendChild(el);
+
+  requestAnimationFrame(() => el.classList.add("visible"));
+  setTimeout(() => {
+    el.classList.remove("visible");
+    setTimeout(() => el.remove(), 300);
+  }, 2000);
 }
