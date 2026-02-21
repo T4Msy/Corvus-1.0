@@ -11,6 +11,9 @@ let USER_ID = "web-user";
 let USUARIO_PERFIL = null;
 let IS_CONVIDADO = false;
 
+// ===== MODO FENRIR =====
+let MODO_FENRIR = false;
+
 // ===== CHATS =====
 const STORAGE_KEY = "corvus_conversations_v1";
 const ACTIVE_CHAT_KEY = "corvus_active_conversation_id";
@@ -185,6 +188,16 @@ function initializeApp() {
   const clearAllBtn = document.getElementById("clearAllChatsBtn");
 
   // Event Listeners
+  // Toggle Fenrir
+  const fenrirToggle = document.getElementById("fenrirToggle");
+  fenrirToggle?.addEventListener("click", () => {
+    MODO_FENRIR = !MODO_FENRIR;
+    fenrirToggle.classList.toggle("active", MODO_FENRIR);
+    fenrirToggle.title = MODO_FENRIR ? "Desativar modo Fenrir" : "Ativar modo Fenrir — Criatividade";
+    const input = document.getElementById("messageInput");
+    if (input) input.placeholder = MODO_FENRIR ? "Modo Fenrir ativo — criatividade da MSY..." : "Faça sua pergunta ao Corvus...";
+  });
+
   sendBtn?.addEventListener("click", () => sendMessage());
   messageInput?.addEventListener("keydown", handleKeyDown);
 
@@ -470,6 +483,7 @@ async function sendMessage() {
   userId: USER_ID,
   sessionId: conv.sessionId,
   conversationId: conv.id,
+  modo: MODO_FENRIR ? "fenrir" : "corvus",
   userContext: {
     nome: USUARIO_PERFIL?.nome_interno || USUARIO_PERFIL?.nome || "Convidado",
     cargo: USUARIO_PERFIL?.cargo || "",
@@ -538,9 +552,14 @@ async function appendMessage(role, text, saveToHistory = true) {
       ? `<img src="corvuslogo.png" alt="Corvus" class="avatar-image" />`
       : `<span>${inicialUsuario}</span>`;
 
+  const fenrirTagHTML = (role === "corvus" && MODO_FENRIR)
+    ? `<div class="fenrir-tag">⚡ Fenrir</div>`
+    : "";
+
   messageDiv.innerHTML = `
     <div class="message-avatar">${avatarHTML}</div>
     <div class="message-content">
+      ${fenrirTagHTML}
       <div class="message-bubble">${displayText}</div>
       <div class="message-actions">
         <span class="message-timestamp">${timestamp}</span>
